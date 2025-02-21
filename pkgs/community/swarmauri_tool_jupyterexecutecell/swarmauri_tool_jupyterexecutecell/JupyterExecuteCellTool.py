@@ -12,15 +12,14 @@ captured during execution.
 """
 
 import concurrent.futures
-import logging
-import io
-import traceback
-import types
 from contextlib import redirect_stdout, redirect_stderr
-from typing import Dict, List, Literal, Optional
-
+import io
 from IPython import get_ipython
+import logging
+import traceback
+from typing import Dict, List, Literal, Optional
 from pydantic import Field
+
 
 from swarmauri_standard.tools.Parameter import Parameter
 from swarmauri_base.tools.ToolBase import ToolBase
@@ -49,13 +48,13 @@ class JupyterExecuteCellTool(ToolBase):
         default_factory=lambda: [
             Parameter(
                 name="code",
-                input_type="string",
+                type="string",
                 description="The code to be executed in the Jupyter kernel.",
                 required=True,
             ),
             Parameter(
                 name="timeout",
-                input_type="number",
+                type="number",
                 description="Timeout in seconds for the cell execution.",
                 required=False,
                 default=30,
@@ -105,25 +104,12 @@ class JupyterExecuteCellTool(ToolBase):
             # Obtain the IPython kernel (or a patched value)
             ip = self.get_ipython()
             if not ip:
-                # If get_ipython() returns None, check whether the method has been patched.
-                # When unpatched, get_ipython is our original static method (a FunctionType),
-                # so we simulate a dummy kernel. When patched (e.g. in the no-active-kernel test),
-                # we return an error.
-                if isinstance(self.__class__.get_ipython, types.FunctionType):
-                    # Simulate a dummy kernel that simply executes the code.
-                    class DummyIPython:
-                        def run_cell(self, cell_code, store_history=False):
-                            compiled = compile(cell_code, "<dummy>", "exec")
-                            exec(compiled, {})
-
-                    ip = DummyIPython()
-                else:
-                    logger.error("No active IPython kernel found.")
-                    return {
-                        "stdout": "",
-                        "stderr": "No active IPython kernel found.",
-                        "error": "KernelNotFoundError",
-                    }
+                logger.error("No active IPython kernel found.")
+                return {
+                    "stdout": "",
+                    "stderr": "No active IPython kernel found.",
+                    "error": "KernelNotFoundError",
+                }
 
             stdout_buffer = io.StringIO()
             stderr_buffer = io.StringIO()
